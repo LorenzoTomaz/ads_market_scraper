@@ -1,0 +1,34 @@
+{
+    "data": {
+        "page": null,
+        "ad_library_page_info": null,
+        "viewer": {
+            "actor": {
+                "__typename": "LoggedOutUser",
+                "profile_picture": {
+                    "uri": "https://scontent-gig4-1.xx.fbcdn.net/v/t1.30497-1/85215299_479381239411958_7755129104415850496_n.jpg?stp=c15.0.50.50a_cp0_dst-jpg_p50x50&_nc_cat=1&ccb=1-7&_nc_sid=6edbb6&_nc_ohc=D7AiVEgTvmMAX9eX75U&_nc_ht=scontent-gig4-1.xx&oh=00_AfA4XMwLPK0YtoM4Sqox5BOJ6h3rFgpyCEtDb9FXNzQMpw&oe=646C9B16"
+                },
+                "id": "0"
+            }
+        },
+        "ad_library_user": null,
+        "ad_library_system_status": {
+            "system_status": {
+                "status": "NO_KNOWN_ISSUES",
+                "active_issues": []
+            }
+        },
+        "ad_library_main": {
+            "top_keywords": null
+        },
+        "audience_page_info": null
+    },
+    "extensions": {
+        "prefetch_uris": ["https://scontent-gig4-1.xx.fbcdn.net/v/t1.30497-1/85215299_479381239411958_7755129104415850496_n.jpg?stp=c15.0.50.50a_cp0_dst-jpg_p50x50&_nc_cat=1&ccb=1-7&_nc_sid=6edbb6&_nc_ohc=D7AiVEgTvmMAX9eX75U&_nc_ht=scontent-gig4-1.xx&oh=00_AfA4XMwLPK0YtoM4Sqox5BOJ6h3rFgpyCEtDb9FXNzQMpw&oe=646C9B16"],
+        "prefetch_uris_v2": [{
+            "uri": "https://scontent-gig4-1.xx.fbcdn.net/v/t1.30497-1/85215299_479381239411958_7755129104415850496_n.jpg?stp=c15.0.50.50a_cp0_dst-jpg_p50x50&_nc_cat=1&ccb=1-7&_nc_sid=6edbb6&_nc_ohc=D7AiVEgTvmMAX9eX75U&_nc_ht=scontent-gig4-1.xx&oh=00_AfA4XMwLPK0YtoM4Sqox5BOJ6h3rFgpyCEtDb9FXNzQMpw&oe=646C9B16",
+            "label": null
+        }],
+        "is_final": true
+    }
+}
