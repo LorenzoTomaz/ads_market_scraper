@@ -4,3 +4,5 @@ selenium_stealth
 click
 python-dotenv
 selenium-wire
+openai
+backoff
