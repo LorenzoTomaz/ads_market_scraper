@@ -1,0 +1,6 @@
+browsermob-proxy
+selenium
+selenium_stealth
+click
+python-dotenv
+selenium-wire
