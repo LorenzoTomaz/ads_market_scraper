@@ -5,3 +5,4 @@ chromedriver
 __pycache__
 proxy
 network_log.json
+.DS_Store
