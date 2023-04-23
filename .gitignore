@@ -4,3 +4,4 @@ chromedriver
 .env
 __pycache__
 proxy
+network_log.json
