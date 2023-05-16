@@ -2,6 +2,7 @@ import abc
 import json
 import logging
 from typing import Dict, Iterable, List, Literal, Tuple, TypedDict, Union
+import pandas as pd
 
 
 class Entry(TypedDict):
@@ -143,11 +144,11 @@ class Executor:
                 strategy: BaseStrategy = Strategy(data=entry)
                 try:
                     url = strategy.data["request"]["url"]
-                    has_url = url.startswith("https://www.facebook.com/api/graphql")
-                    if has_url and strategy._url_valid():
-                        print(strategy._mime_type_valid())
-                        print(strategy._url_valid())
-                        print(strategy._object_valid())
+                    # has_url = url.startswith("https://www.facebook.com/api/graphql")
+                    # if has_url and strategy._url_valid():
+                    #     print(strategy._mime_type_valid())
+                    #     print(strategy._url_valid())
+                    #     print(strategy._object_valid())
                     if strategy._url_valid() and strategy.validate():
                         parsed_entry = strategy.parse()
                         yield (parsed_entry, strategy.strategy)
@@ -162,3 +163,85 @@ class Executor:
                 if strategy:
                     data[strategy].append(entry)
             f.write(json.dumps(data))
+
+    def to_excel(self, entries: List[Entry], file_path: str, threshold: int = 30):
+        search_ads = pd.DataFrame(
+            [],
+            [
+                "collationCount",
+                "isActive",
+                "pageID",
+                "pageName",
+                "pageIsDeleted",
+                "ad_creative_id",
+                "title",
+            ],
+        )
+        for entry, strategy in self.execute(entries):
+            if strategy:
+                if strategy == "search_ads":
+                    results = entry["response"]["content"]["text"]["payload"]["results"]
+                    if results is not None and len(results) > 0:
+                        for result in results:
+                            if len(result) > 0:
+                                for r in result:
+                                    ad_archive_id = r.get("adArchiveID", "")
+                                    page_id = r.get("pageID", "")
+                                    url = f"https://www.facebook.com/ads/library/?active_status=all&ad_type=political_and_issue_ads&country=BR&id={ad_archive_id}&view_all_page_id={page_id}&search_type=page&media_type=all"
+                                    collation_count = (
+                                        int(r.get("collationCount", 0))
+                                        if r.get("collationCount", 0) is not None
+                                        else 0
+                                    )
+                                    base_data = {
+                                        "collationCount": collation_count,
+                                        "isActive": r.get("isActive", False),
+                                        "pageID": r["pageID"],
+                                        "pageName": r["pageName"],
+                                        "pageIsDeleted": r["pageIsDeleted"],
+                                        "ad_url": url,
+                                    }
+                                    snapshots = r["snapshot"]
+                                    if (
+                                        collation_count is None
+                                        or collation_count < threshold
+                                    ):
+                                        continue
+                                    if "ad_creative_id" in snapshots:
+                                        page_categories = snapshots.get(
+                                            "page_categories", {}
+                                        )
+                                        categories = list(page_categories.values())
+                                        parsed_categories = "".join(
+                                            str(x) for x in categories
+                                        )
+                                        base_snapshot = {
+                                            "ad_creative_id": snapshots[
+                                                "ad_creative_id"
+                                            ],
+                                            "page_categories": parsed_categories,
+                                            "caption": snapshots.get("caption", ""),
+                                        }
+                                        cards = snapshots.get("cards", [])
+                                        if cards is not None and len(cards) > 0:
+                                            for card in cards:
+                                                if "title" in card:
+                                                    base_card = {
+                                                        "title": card.get("title", ""),
+                                                        "body": card.get("body", ""),
+                                                        "link": card.get(
+                                                            "link_url", ""
+                                                        ),
+                                                    }
+                                                    frame = {
+                                                        **base_card,
+                                                        **base_snapshot,
+                                                        **base_data,
+                                                    }
+                                                    search_ads = pd.concat(
+                                                        [
+                                                            search_ads,
+                                                            pd.DataFrame([frame]),
+                                                        ]
+                                                    )
+        search_ads.to_excel(file_path, index=False)

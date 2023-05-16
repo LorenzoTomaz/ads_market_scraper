@@ -6,3 +6,5 @@ python-dotenv
 selenium-wire
 openai
 backoff
+pandas
+openpyxl

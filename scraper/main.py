@@ -2,7 +2,7 @@ import logging
 import os
 import pprint
 import time
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from seleniumwire import webdriver
 from selenium_stealth import stealth
 import json
@@ -53,32 +53,31 @@ def merge_url_query_params(
 class Scraper:
     def __init__(self, headless: bool = True, suppress: bool = False) -> None:
         self.suppress = suppress
+
+        self.options: webdriver.ChromeOptions() = webdriver.ChromeOptions()
+        if "CHROME_BROWSER_PATH" in os.environ:
+            self.options.binary_location = CHROME_BROWSER_PATH
+        user_agent = """Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36
+        (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36"""
+        self.options.add_argument("--start-maximized")
+        self.options.add_argument("enable-automation")
+        self.options.add_argument("--no-sandbox")
+        self.options.add_argument("--disable-dev-shm-usage")
+        self.options.add_argument("--disable-browser-side-navigation")
+        self.options.add_argument("--disable-gpu")
+        self.options.add_argument("--disable-notifications")
+        self.options.add_argument("disable-infobars")
         if headless:
-            self.options: webdriver.ChromeOptions() = webdriver.ChromeOptions()
-            if "CHROME_BROWSER_PATH" in os.environ:
-                self.options.binary_location = CHROME_BROWSER_PATH
-            user_agent = """Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36
-            (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36"""
-            self.options.add_argument("--start-maximized")
-            self.options.add_argument("enable-automation")
-            self.options.add_argument("--no-sandbox")
-            self.options.add_argument("--disable-dev-shm-usage")
-            self.options.add_argument("--disable-browser-side-navigation")
-            self.options.add_argument("--disable-gpu")
-            self.options.add_argument("--disable-notifications")
-            self.options.add_argument("disable-infobars")
-            # self.options.add_argument("--headless=chrome")
-            self.options.add_argument("--force-device-scale-factor=1")
-            self.options.add_extension(
-                extension="./I-still-don-t-care-about-cookies.crx"
-            )
-            # https://stackoverflow.com/questions/56637973/how-to-fix-selenium-devtoolsactiveport-file-doesnt-exist-exception-in-python
-            self.options.add_argument("--remote-debugging-port=53717")
-            self.options.add_argument(f"user-agent={user_agent}")
-            self.options.add_argument("enable-features=NetworkServiceInProcess")
-            self.options.add_argument("disable-features=NetworkService")
-            self.options.add_argument("--ignore-certificate-errors")
-            self.options.add_argument("--log-level=3")
+            self.options.add_argument("--headless=chrome")
+        self.options.add_argument("--force-device-scale-factor=1")
+        self.options.add_extension(extension="./I-still-don-t-care-about-cookies.crx")
+        # https://stackoverflow.com/questions/56637973/how-to-fix-selenium-devtoolsactiveport-file-doesnt-exist-exception-in-python
+        self.options.add_argument("--remote-debugging-port=53717")
+        self.options.add_argument(f"user-agent={user_agent}")
+        self.options.add_argument("enable-features=NetworkServiceInProcess")
+        self.options.add_argument("disable-features=NetworkService")
+        self.options.add_argument("--ignore-certificate-errors")
+        self.options.add_argument("--log-level=3")
 
     def __enter__(self):
         # desired_capabilities = DesiredCapabilities.CHROME
@@ -96,7 +95,8 @@ class Scraper:
         self.driver.set_page_load_timeout(100)
         # Defining a fix window size at starts avoids chromium initializing with mobile screen settings
         # https://bugs.chromium.org/p/chromium/issues/detail?id=904207
-        self.driver.set_window_size(1040, 970)
+        # self.driver.set_window_size(1040, 970)
+        self.driver.maximize_window()
         stealth(
             self.driver,
             languages=["en-US", "en"],
@@ -129,11 +129,32 @@ class Scraper:
                     parsed_logs.append(log)
             f.write(json.dumps(parsed_logs, indent=4))
 
-    def save_network_logs(self, file_path: str = "network_log.json"):
+    def save_network_logs(self, file_path: str = "network_log.json") -> Dict[Any, Any]:
         if os.path.isfile(file_path):
             os.remove(file_path)
         entries = json.loads(self.driver.har)["log"]["entries"]
         Executor().save(entries=entries, file_path=file_path)
+        return entries
+
+    def to_excel(self, entries: Dict[Any, Any], file_path: str = "network_log.xlsx"):
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+        Executor().to_excel(entries=entries, file_path=file_path)
+
+    def see_more(self):
+        try:
+            time.sleep(10)
+            elements = self.driver.find_element(
+                "xpath", "//span[contains(text(), 'See more')]"
+            )
+            if isinstance(elements, list):
+                element = elements[0]
+            else:
+                element = elements
+            element.click()
+            time.sleep(5)
+        except Exception as e:
+            logging.error(e)
 
     def scrape(
         self,
@@ -143,14 +164,29 @@ class Scraper:
     ):
         self.driver.get(merge_url_query_params(URL, params))
         time.sleep(30)
+        print("Starting to scroll...")
+        page_height = self.driver.execute_script("return document.body.scrollHeight")
         for i in range(1, rounds):
-            logging.info(f"Round #{i}")
+            print(f"Round #{i}")
             self.driver.execute_script(
                 "window.scrollTo(0, document.body.scrollHeight);"
             )
-            time.sleep(10)
+            self.see_more()
+            time.sleep(5)
+            new_page_height = self.driver.execute_script(
+                "return document.body.scrollHeight"
+            )
+            if (new_page_height - page_height) < 1000:
+                print("No more ads to load")
+                break
         time.sleep(20)
-        self.save_network_logs(file_path=file_path)
+        entries = self.save_network_logs(file_path=file_path)
+        xlsx_path = (
+            file_path.replace(".json", ".xlsx")
+            if file_path.endswith(".json")
+            else file_path + ".xlsx"
+        )
+        self.to_excel(entries=entries, file_path=xlsx_path)
 
     def __exit__(self, exception_type, exception_value, traceback) -> bool:
         self.driver.quit()

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from scraper.main import Scraper
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 
 @click.command()
@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 )
 @click.option(
     "--rounds",
-    default=1,
+    default=10,
     help="Rounds of scroll height to be captured",
     type=click.INT,
 )
