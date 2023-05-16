@@ -156,17 +156,8 @@ class Scraper:
         except Exception as e:
             logging.error(e)
 
-    def scrape(
-        self,
-        params: Dict[str, str] = DEFAULT_PARAMS,
-        rounds: int = 10,
-        file_path: str = "network_log.json",
-    ):
-        self.driver.get(merge_url_query_params(URL, params))
-        time.sleep(30)
-        print("Starting to scroll...")
-        page_height = self.driver.execute_script("return document.body.scrollHeight")
-        for i in range(1, rounds):
+    def load_step(self, i, page_height, retries=3):
+        try:
             print(f"Round #{i}")
             self.driver.execute_script(
                 "window.scrollTo(0, document.body.scrollHeight);"
@@ -178,7 +169,26 @@ class Scraper:
             )
             if (new_page_height - page_height) < 1000:
                 print("No more ads to load")
-                break
+                return False
+            return True
+        except Exception as e:
+            logging.error(e)
+            if retries > 0:
+                print("Retrying...")
+                return self.load_step(i, page_height, retries - 1)
+
+    def scrape(
+        self,
+        params: Dict[str, str] = DEFAULT_PARAMS,
+        rounds: int = 10,
+        file_path: str = "network_log.json",
+    ):
+        self.driver.get(merge_url_query_params(URL, params))
+        time.sleep(30)
+        print("Starting to scroll...")
+        page_height = self.driver.execute_script("return document.body.scrollHeight")
+        for i in range(1, rounds):
+            self.load_step(i, page_height)
         time.sleep(20)
         entries = self.save_network_logs(file_path=file_path)
         xlsx_path = (
